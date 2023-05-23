@@ -46,25 +46,21 @@ class MainActivity : AppCompatActivity() {
                 Manifest.permission.ACCESS_COARSE_LOCATION
             ).withListener(object : MultiplePermissionsListener {
                 override fun onPermissionsChecked(report: MultiplePermissionsReport?) {
-                    if (report!!.areAllPermissionsGranted()) {
-                        requestLocationData()
+                    if (report != null) {
+                        if (report.areAllPermissionsGranted()) {
+                            requestLocationData()
+                        }
                     }
 
-                    if (report.isAnyPermissionPermanentlyDenied) {
-                        Toast.makeText(
-                            this@MainActivity,
-                            "You have denied location permission",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                    if (report != null) {
+                        if (report.isAnyPermissionPermanentlyDenied) {
+                            Toast.makeText(this@MainActivity, "You have denied location permission", Toast.LENGTH_SHORT).show()
+                        }
                     }
                 }
 
-                override fun onPermissionRationaleShouldBeShown(
-                    permision: MutableList<PermissionRequest>?,
-                    token: PermissionToken?
-                ) {
-                    showRationalDialogPermission()
-                }
+                override fun onPermissionRationaleShouldBeShown(permision: MutableList<PermissionRequest>?, token: PermissionToken?)
+                { showRationalDialogPermission() }
 
             }).onSameThread().check()
         }
