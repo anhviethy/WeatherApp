@@ -6,6 +6,7 @@ import android.app.Dialog
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationManager
 import android.net.Uri
@@ -15,7 +16,10 @@ import android.os.Looper
 import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
+import androidx.core.content.ContextCompat
 import com.google.android.gms.location.*
 import com.karumi.dexter.Dexter
 import com.karumi.dexter.MultiplePermissionsReport
@@ -26,7 +30,28 @@ import com.karumi.dexter.listener.multi.MultiplePermissionsListener
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var mFusedLocationClient : FusedLocationProviderClient
+    private lateinit var mFusedLocationClient: FusedLocationProviderClient
+
+    private val locationPermissionLaunch: ActivityResultLauncher<Array<String>> =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permission ->
+            permission.entries.forEach {
+                val permissionName = it.key
+                val isGranted = it.value
+
+                if (isGranted) {
+                    when (permissionName) {
+                        Manifest.permission.ACCESS_FINE_LOCATION -> {
+                            Toast.makeText(this, "Permission fine location is granted", Toast.LENGTH_LONG).show()
+                        }
+                        Manifest.permission.ACCESS_COARSE_LOCATION -> {
+                            Toast.makeText(this, "Permission coarse location is granted", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
+            }
+        }
+
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,50 +66,33 @@ class MainActivity : AppCompatActivity() {
                 Toast.LENGTH_SHORT
             ).show()
         } else {
-            Dexter.withContext(this).withPermissions(
-                Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            ).withListener(object : MultiplePermissionsListener {
-                override fun onPermissionsChecked(report: MultiplePermissionsReport?) {
-                    if (report != null) {
-                        if (report.areAllPermissionsGranted()) {
+            when {
+                (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                        && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) -> {
                             requestLocationData()
                         }
-                    }
-
-                    if (report != null) {
-                        if (report.isAnyPermissionPermanentlyDenied) {
-                            Toast.makeText(this@MainActivity, "You have denied location permission", Toast.LENGTH_SHORT).show()
-                        }
-                    }
+                (shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION)
+                        && shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_COARSE_LOCATION)) -> {
+                    showRationalDialogPermission()
                 }
-
-                override fun onPermissionRationaleShouldBeShown(permision: MutableList<PermissionRequest>?, token: PermissionToken?)
-                { showRationalDialogPermission() }
-
-            }).onSameThread().check()
+                else -> locationPermissionLaunch.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
+            }
         }
     }
 
     @SuppressLint("MissingPermission")
-    private fun requestLocationData(){
-        val mLocationRequest = LocationRequest()
-        mLocationRequest.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+    private fun requestLocationData() {
+        mFusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
+            val latitude = location?.latitude
+            val longitude = location?.longitude
 
-        mFusedLocationClient.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper())
+            Log.i("via", "latitude =  $latitude longitude = $longitude")
+        }
     }
 
-    private val mLocationCallback = object : LocationCallback() {
-        override fun onLocationResult(locationResult: LocationResult) {
-            val mLastLocation: Location? = locationResult.lastLocation
+    private fun getLocationWeatherDetail(){
+        if(Constants.isNetworkAvailable(this)){
 
-            val latitude = mLastLocation?.latitude
-            Log.i("Current Latitude","$latitude")
-
-            val longitude = mLastLocation?.longitude
-            Log.i("Current Latitude","$longitude")
-
-            super.onLocationResult(locationResult)
         }
     }
 
@@ -100,11 +108,12 @@ class MainActivity : AppCompatActivity() {
                     e.printStackTrace()
                 }
             }
-            .setNegativeButton("Cancel") { dialog, _ -> finish() }.show()
+            .setNegativeButton("Cancel") { dialog, _ -> dialog.dismiss() }.show()
     }
 
     private fun isLocationEnable(): Boolean {
-        val locationManager: LocationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        val locationManager: LocationManager =
+            getSystemService(Context.LOCATION_SERVICE) as LocationManager
         return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
                 || locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
     }
