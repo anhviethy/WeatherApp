@@ -65,7 +65,7 @@ class MainActivity : AppCompatActivity() {
                 "Your location provider is turned off. Please turn it on",
                 Toast.LENGTH_SHORT
             ).show()
-        } else {
+        }
             when {
                 (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
                         && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) -> {
@@ -77,7 +77,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 else -> locationPermissionLaunch.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
             }
-        }
+
     }
 
     @SuppressLint("MissingPermission")
