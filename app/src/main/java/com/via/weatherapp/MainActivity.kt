@@ -119,9 +119,12 @@ class MainActivity : AppCompatActivity() {
                 lat!!, lon!!,Constants.METRIC_UNIT, Constants.APP_ID
             )
 
+            showCustomProgressDialog()
+
             listCall.enqueue(object : Callback<WeatherResponse> {
                 override fun onResponse(call: Call<WeatherResponse>, response: Response<WeatherResponse>?) {
                     if(response!!.isSuccessful){
+                        hideProgressDialog()
                         val weatherList: WeatherResponse? = response.body()
                         Log.i("Response Result", "$weatherList")
                     } else {
@@ -141,6 +144,7 @@ class MainActivity : AppCompatActivity() {
 
                 override fun onFailure(call: Call<WeatherResponse>, t: Throwable) {
                     Log.e("Errorr.....",t.message.toString())
+                    hideProgressDialog()
                 }
 
             })
@@ -171,9 +175,15 @@ class MainActivity : AppCompatActivity() {
                 || locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
     }
 
-    private fun showCustomProgressBar(){
+    private fun showCustomProgressDialog(){
         mProgressDialog = Dialog(this)
         mProgressDialog?.setContentView(R.layout.dialog_custom_progress)
         mProgressDialog?.show()
+    }
+
+    private fun hideProgressDialog(){
+        if(mProgressDialog != null){
+            mProgressDialog?.dismiss()
+        }
     }
 }
