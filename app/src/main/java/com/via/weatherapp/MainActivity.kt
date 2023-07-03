@@ -20,6 +20,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.*
+import com.via.weatherapp.databinding.ActivityMainBinding
 import com.via.weatherapp.models.WeatherResponse
 import com.via.weatherapp.network.WeatherService
 import retrofit2.Call
@@ -31,6 +32,8 @@ import retrofit2.converter.gson.GsonConverterFactory
 class MainActivity : AppCompatActivity() {
 
     private lateinit var mFusedLocationClient: FusedLocationProviderClient
+
+    private lateinit var binding: ActivityMainBinding
 
     private var mProgressDialog: Dialog? = null
 
@@ -64,7 +67,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
@@ -77,8 +81,12 @@ class MainActivity : AppCompatActivity() {
         }
         when {
             (ContextCompat.checkSelfPermission(
-                this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-                    && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) -> {
+                this, Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+                    && ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED) -> {
                 requestLocationData()
             }
             (shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION)
@@ -116,34 +124,39 @@ class MainActivity : AppCompatActivity() {
             val service: WeatherService = retrofit.create(WeatherService::class.java)
 
             val listCall: Call<WeatherResponse> = service.getWeather(
-                lat!!, lon!!,Constants.METRIC_UNIT, Constants.APP_ID
+                lat!!, lon!!, Constants.METRIC_UNIT, Constants.APP_ID
             )
 
             showCustomProgressDialog()
 
             listCall.enqueue(object : Callback<WeatherResponse> {
-                override fun onResponse(call: Call<WeatherResponse>, response: Response<WeatherResponse>?) {
-                    if(response!!.isSuccessful){
+                override fun onResponse(
+                    call: Call<WeatherResponse>,
+                    response: Response<WeatherResponse>?
+                ) {
+                    if (response!!.isSuccessful) {
                         hideProgressDialog()
                         val weatherList: WeatherResponse? = response.body()
+                        weatherList?.let { setupUI(it) }
                         Log.i("Response Result", "$weatherList")
                     } else {
-                        when(response.code()){
+                        when (response.code()) {
                             400 -> {
-                                Log.e("Error 400","Bad connection")
+                                Log.e("Error 400", "Bad connection")
                             }
 
                             404 -> {
-                                Log.e("Error 404","Not found")
-                            } else -> {
-                                Log.e("Error","Generic error")
+                                Log.e("Error 404", "Not found")
+                            }
+                            else -> {
+                                Log.e("Error", "Generic error")
                             }
                         }
                     }
                 }
 
                 override fun onFailure(call: Call<WeatherResponse>, t: Throwable) {
-                    Log.e("Errorr.....",t.message.toString())
+                    Log.e("Errorr.....", t.message.toString())
                     hideProgressDialog()
                 }
 
@@ -175,15 +188,34 @@ class MainActivity : AppCompatActivity() {
                 || locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
     }
 
-    private fun showCustomProgressDialog(){
+    private fun showCustomProgressDialog() {
         mProgressDialog = Dialog(this)
         mProgressDialog?.setContentView(R.layout.dialog_custom_progress)
         mProgressDialog?.show()
     }
 
-    private fun hideProgressDialog(){
-        if(mProgressDialog != null){
+    private fun hideProgressDialog() {
+        if (mProgressDialog != null) {
             mProgressDialog?.dismiss()
         }
+    }
+
+    private fun setupUI(weatherList: WeatherResponse) {
+        for (i in weatherList.weather.indices) {
+            Log.i("WeatherName", weatherList.weather.toString())
+            binding.tvMain.text = weatherList.weather[i].main
+            binding.tvMainDescription.text = weatherList.weather[i].description
+            binding.tvTemp.text =
+                weatherList.main.temp.toString() + getUnit(application.resources.configuration.toString())
+            binding.tvHumidity.text = weatherList.main.humidity.toString() + "%"
+        }
+    }
+
+    private fun getUnit(value: String): String? {
+        var value = "°C"
+        if ("US" == value || "LR" == value || "MM" == value) {
+            value = "°F"
+        }
+        return value
     }
 }
