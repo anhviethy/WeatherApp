@@ -5,6 +5,6 @@ import java.io.Serializable
 data class Sys(
     val type: Int,
     val country: String,
-    val sunrise: Int,
-    val sunset: Int
+    val sunrise: Long,
+    val sunset: Long
 ) : Serializable
